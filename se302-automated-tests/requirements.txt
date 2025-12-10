@@ -1,0 +1,6 @@
+# Python requirements (for collaborating via Playwright CLI if using python -m playwright)
+# Note: The project itself uses Node.js @playwright/test. This file is provided
+# for collaborators who prefer installing Playwright via pip to fetch browsers.
+
+playwright==1.40.0
+

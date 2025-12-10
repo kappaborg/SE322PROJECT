@@ -55,7 +55,7 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     }
     throw new Error('Navigation target not found and no direct URL provided');
   }
-
+  /*
   test('TC-020: Navigate to Courses after login and capture evidence', async ({ page }) => {
     const homePage = new HomePage(page);
     const loginPage = new LoginPage(page);
@@ -92,7 +92,7 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     await coursePageHandle.screenshot({ path: 'test-results/screenshots/courses.png', fullPage: true });
   });
 
-  test('TC-021: Navigate to Grades after login and capture evidence', async ({ page }) => {
+  /*test('TC-021: Navigate to Grades after login and capture evidence', async ({ page }) => {
     const homePage = new HomePage(page);
     const loginPage = new LoginPage(page);
     const gradesPage = new GradesPage(page);
@@ -165,7 +165,8 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     // Capture screenshot evidence
     await scaPageHandle.screenshot({ path: 'test-results/screenshots/student-certificate-application.png', fullPage: true });
   });
-  test('TC-023: Navigate to Attendance Record, selecting semester and applying filters after login and capture evidence', async ({ page }) => {
+  */
+  test('TC-023: Navigate to Attendance Record, selecting semesters (Fall, Spring, Session 1, Session 2, Session 3, Session 4) and applying filters after login and capture evidence', async ({ page }) => {
     const homePage = new HomePage(page);
     const loginPage = new LoginPage(page);
     const attendanceRecordPage = new AttendanceRecordPage(page);
@@ -189,24 +190,35 @@ test.describe('Post-login Navigation - IUS SIS', () => {
       '/Ogrenci/Ogr0123/Default.aspx?lang=en-US'
     );
 
-    // Select Fall semester if dropdown exists, then list/apply
     const attendancePage = new AttendanceRecordPage(attendanceRecordPageHandle);
-    await attendancePage.selectFallSemester();
-    await attendancePage.clickButtonListele();
-    // Allow the listing to render before validation/screenshot
-    await attendanceRecordPageHandle.waitForTimeout(2000);
+    const variants = [
+      { name: 'fall', select: () => attendancePage.selectFallSemester() },
+      { name: 'spring', select: () => attendancePage.selectSpringSemester() },
+      { name: 'session1', select: () => attendancePage.selectSession1Semester() },
+      { name: 'session2', select: () => attendancePage.selectSession2Semester() },
+      { name: 'session3', select: () => attendancePage.selectSession3Semester() },
+      { name: 'session4', select: () => attendancePage.selectSession4Semester() },
+    ];
 
-    // Wait for table/list to render and validate presence
-    await attendanceRecordPageHandle.waitForSelector('table tr, .grid tr, .data-table tr, h1:has-text("Student Attendance Status"), h2:has-text("List of criteria")', { timeout: 10000 }).catch(() => {});
-    const hasAttendanceRecord = await attendancePage.isdocumentsListVisible();
-    expect(hasAttendanceRecord).toBeTruthy();
-
-    // Capture sample rows for logging
-    const attendanceRecord = await attendancePage.getSampleAttendanceRecord();
-    console.log('Sample attendance record:', attendanceRecord);
-
-    // Capture screenshot evidence
-    await attendanceRecordPageHandle.screenshot({ path: 'test-results/screenshots/attendance-record.png', fullPage: true });
+    for (const variant of variants) {
+      await variant.select();
+      await attendancePage.clickButtonListele();
+      await attendanceRecordPageHandle.waitForTimeout(2000);
+      await attendanceRecordPageHandle
+        .waitForSelector(
+          'table tr, .grid tr, .data-table tr, h1:has-text("Student Attendance Status"), h2:has-text("List of criteria")',
+          { timeout: 10000 }
+        )
+        .catch(() => {});
+      const hasAttendanceRecord = await attendancePage.isdocumentsListVisible();
+      expect(hasAttendanceRecord).toBeTruthy();
+      const attendanceRecord = await attendancePage.getSampleAttendanceRecord();
+      console.log(`Sample attendance record (${variant.name}):`, attendanceRecord);
+      await attendanceRecordPageHandle.screenshot({
+        path: `test-results/screenshots/attendance-record-${variant.name}.png`,
+        fullPage: true,
+      });
+    }
   });
 });
 

@@ -27,6 +27,11 @@ class AttendanceRecordPage extends BasePage {
     this.semesterDropdownArrow = '#ccYilDonem__cmbDonem .rcbArrowCell';
     // Exact selector for Fall
     this.semesterOptionFall = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(2)';
+    this.semesterOptionSpring = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(3)';
+    this.semesterOptionSession1 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(4)';
+    this.semesterOptionSession2 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(5)';
+    this.semesterOptionSession3 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(6)';
+    this.semesterOptionSession4 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(7)';
     this.buttonListele = '#btnListele';
     this.buttonApply = '#btnListele_input';
     this.buttonListeleClientState = '#btnListele_ClientState'
@@ -83,6 +88,76 @@ class AttendanceRecordPage extends BasePage {
     const fallOption = this.page.locator(this.semesterOptionFall);
     if (await fallOption.count()) {
       await fallOption.first().click({ timeout: 5000 });
+      await this.waitForLoadState();
+    }
+  }
+  async selectSpringSemester() {
+    if (await this.isVisible(this.semesterDropdownArrow)) {
+      await this.click(this.semesterDropdownArrow);
+      await this.page.waitForTimeout(500);
+    } else if (await this.isVisible(this.semesterDropdown)) {
+      await this.click(this.semesterDropdown);
+      await this.page.waitForTimeout(500);
+    }
+    const springOption = this.page.locator(this.semesterOptionSpring);
+    if (await springOption.count()) {
+      await springOption.first().click({ timeout: 5000 });
+      await this.waitForLoadState();
+    }
+  }
+  async selectSession1Semester() {
+    if (await this.isVisible(this.semesterDropdownArrow)) {
+      await this.click(this.semesterDropdownArrow);
+      await this.page.waitForTimeout(500);
+    } else if (await this.isVisible(this.semesterDropdown)) {
+      await this.click(this.semesterDropdown);
+      await this.page.waitForTimeout(500);
+    }
+    const session1Option = this.page.locator(this.semesterOptionSession1);
+    if (await session1Option.count()) {
+      await session1Option.first().click({ timeout: 5000 });
+      await this.waitForLoadState();
+    }
+  }
+  async selectSession2Semester() {
+    if (await this.isVisible(this.semesterDropdownArrow)) {
+      await this.click(this.semesterDropdownArrow);
+      await this.page.waitForTimeout(500);
+    } else if (await this.isVisible(this.semesterDropdown)) {
+      await this.click(this.semesterDropdown);
+      await this.page.waitForTimeout(500);
+    }
+    const session2Option = this.page.locator(this.semesterOptionSession2);
+    if (await session2Option.count()) {
+      await session2Option.first().click({ timeout: 5000 });
+      await this.waitForLoadState();
+    }
+  }
+  async selectSession3Semester() {
+    if (await this.isVisible(this.semesterDropdownArrow)) {
+      await this.click(this.semesterDropdownArrow);
+      await this.page.waitForTimeout(500);
+    } else if (await this.isVisible(this.semesterDropdown)) {
+      await this.click(this.semesterDropdown);
+      await this.page.waitForTimeout(500);
+    }
+    const session3Option = this.page.locator(this.semesterOptionSession3);
+    if (await session3Option.count()) {
+      await session3Option.first().click({ timeout: 5000 });
+      await this.waitForLoadState();
+    }
+  }
+  async selectSession4Semester() {
+    if (await this.isVisible(this.semesterDropdownArrow)) {
+      await this.click(this.semesterDropdownArrow);
+      await this.page.waitForTimeout(500);
+    } else if (await this.isVisible(this.semesterDropdown)) {
+      await this.click(this.semesterDropdown);
+      await this.page.waitForTimeout(500);
+    }
+    const session4Option = this.page.locator(this.semesterOptionSession4);
+    if (await session4Option.count()) {
+      await session4Option.first().click({ timeout: 5000 });
       await this.waitForLoadState();
     }
   }
