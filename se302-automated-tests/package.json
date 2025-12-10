@@ -1,0 +1,32 @@
+{
+  "name": "se302-automated-tests",
+  "version": "1.0.0",
+  "description": "High-end automated testing suite using Playwright and Page Object Model for SE302 course project",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:functional": "playwright test tests/functional",
+    "test:smoke": "playwright test tests/smoke",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "install:browsers": "playwright install"
+  },
+  "keywords": [
+    "playwright",
+    "automation",
+    "testing",
+    "pom",
+    "page-object-model"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "dependencies": {}
+}
+
