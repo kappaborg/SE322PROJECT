@@ -31,8 +31,10 @@ module.exports = defineConfig({
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
   
-  // Opt out of parallel tests on CI
-  workers: process.env.CI ? 1 : undefined,
+  // Number of workers for parallel test execution
+  // Set to 5 to run all 5 attendance record batches in parallel
+  // Can be overridden via command line: --workers=N
+  workers: process.env.CI ? 1 : (process.env.WORKERS ? parseInt(process.env.WORKERS) : 5),
   
   // Reporter configuration
   reporter: [
