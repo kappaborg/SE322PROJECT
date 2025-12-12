@@ -40,7 +40,6 @@ class CoursesPage extends BasePage {
    * Fallback: clicks nav link.
    */
   async goToCourses() {
-    const contexts = [this.page, ...this.page.frames()];
     const selectors = [
       this.courseSchedule,
       this.courseRegistration,
@@ -48,42 +47,25 @@ class CoursesPage extends BasePage {
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0273"]',
       ...this.coursesNavLink
     ];
-
-    for (const ctx of contexts) {
-      for (const sel of selectors) {
-        const loc = ctx.locator(sel);
-        if (await loc.count()) {
-          await loc.first().click({ timeout: 15000 });
-          await this.waitForLoadState();
-          return;
-        }
-      }
-    }
-
-    // Fallback direct navigation
-    await this.navigate('/Ogrenci/Ogr0205/Default.aspx?lang=en-US');
+    await this.clickTreeMenuItem(selectors, '/Ogrenci/Ogr0205/Default.aspx?lang=en-US');
   }
 
   /**
    * Returns true if a course table/list is visible.
    */
   async isCourseListVisible() {
-    return (await this.page.locator(this.courseRows).count()) > 0
-      || (await this.isVisible(this.courseTable))
-      || (await this.isVisible(this.pageHeading));
+    return this.isContentVisible(
+      [this.courseRows],
+      [this.courseTable],
+      [this.pageHeading]
+    );
   }
 
   /**
    * Get the first few course row texts as evidence.
    */
   async getSampleCourses(limit = 3) {
-    const rows = await this.page.locator(this.courseRows).all();
-    const items = [];
-    for (const row of rows.slice(0, limit)) {
-      const text = (await row.innerText()).trim();
-      if (text) items.push(text);
-    }
-    return items;
+    return this.getSampleRows(this.courseRows, limit);
   }
 }
 

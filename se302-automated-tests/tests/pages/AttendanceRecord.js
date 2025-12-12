@@ -17,25 +17,16 @@ class AttendanceRecordPage extends BasePage {
     // Semester dropdown (observed in DOM)
     this.semesterDropdown = '#ccYilDonem__cmbDonem';
     this.semesterDropdownArrow = '#ccYilDonem__cmbDonem .rcbArrowCell';
-    // First semester option (nth-child(1))
-    this.semesterOptionFirst = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(1)';
-    // Exact selector for Semesters
-    this.semesterOptionFall = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(2)';
-    this.semesterOptionSpring = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(3)';
-    this.semesterOptionSession1 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(4)';
-    this.semesterOptionSession2 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(5)';
-    this.semesterOptionSession3 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(6)';
-    this.semesterOptionSession4 = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(7)';
+    this.semesterOptionBase = '#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child';
     
     // Year dropdown (observed in DOM)
     this.yearDropdown = '#ccYilDonem__cmbYil';
     this.yearDropdownArrow = '#ccYilDonem__cmbYil .rcbArrowCell';
-    // Year options from nth-child(1) to nth-child(25)
     this.yearOptionBase = '#ccYilDonem__cmbYil_DropDown > div > ul > li:nth-child';
     
+    // Buttons
     this.buttonListele = '#btnListele';
     this.buttonApply = '#btnListele_input';
-    this.buttonListeleClientState = '#btnListele_ClientState'
 
     // Common grade list structures
     this.documentsTable = 'table, .grid, .data-table';
@@ -47,26 +38,12 @@ class AttendanceRecordPage extends BasePage {
   }
 
   async goTodocuments() {
-    const contexts = [this.page, ...this.page.frames()];
     const selectors = [
       this.attendanceRecord,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0123"]',
       ...this.documentsNavLink
     ];
-
-    for (const ctx of contexts) {
-      for (const sel of selectors) {
-        const loc = ctx.locator(sel);
-        if (await loc.count()) {
-          await loc.first().click({ timeout: 15000 });
-          await this.waitForLoadState();
-          return;
-        }
-      }
-    }
-
-    // Fallback direct navigation
-    await this.navigate('/Ogrenci/Ogr0123/Default.aspx?lang=en-US');
+    await this.clickTreeMenuItem(selectors, '/Ogrenci/Ogr0123/Default.aspx?lang=en-US');
   }
   /**
    * Selects a semester from the semester dropdown (1-7).
@@ -86,7 +63,7 @@ class AttendanceRecordPage extends BasePage {
     }
 
     // Select the semester option by index
-    const semesterOption = this.page.locator(`#ccYilDonem__cmbDonem_DropDown > div > ul > li:nth-child(${semesterIndex})`);
+    const semesterOption = this.page.locator(`${this.semesterOptionBase}(${semesterIndex})`);
     if (await semesterOption.count()) {
       await semesterOption.first().click({ timeout: 5000 });
       await this.waitForLoadState();
@@ -127,28 +104,29 @@ class AttendanceRecordPage extends BasePage {
     }
   }
 
-   //Click button Listele
-   async clickButtonListele() {
-    if (await this.isVisible(this.buttonApply)) {
-      await this.click(this.buttonApply);
-      await this.waitForLoadState();
-    }
-   }
-
-  async isdocumentsListVisible() {
-    return (await this.page.locator(this.attendanceRows).count()) > 0
-      || (await this.isVisible(this.documentsTable))
-      || (await this.isVisible(this.pageHeading));
+  /**
+   * Click button Listele to load attendance records
+   */
+  async clickButtonListele() {
+    await this.clickWithFallbacks([this.buttonApply, this.buttonListele]);
   }
 
+  /**
+   * Returns true if attendance record list is visible
+   */
+  async isdocumentsListVisible() {
+    return this.isContentVisible(
+      [this.attendanceRows],
+      [this.documentsTable],
+      [this.pageHeading]
+    );
+  }
+
+  /**
+   * Get sample attendance records for evidence
+   */
   async getSampleAttendanceRecord(limit = 3) {
-    const rows = await this.page.locator(this.attendanceRows).all();
-    const items = [];
-    for (const row of rows.slice(0, limit)) {
-      const text = (await row.innerText()).trim();
-      if (text) items.push(text);
-    }
-    return items;
+    return this.getSampleRows(this.attendanceRows, limit);
   }
 }
 

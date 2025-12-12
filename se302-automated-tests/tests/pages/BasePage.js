@@ -1,9 +1,3 @@
-/**
- * Base Page Object Model Class
- * 
- * This is the base class that all page classes extend.
- * It contains common methods and properties shared across all pages.
- */
 class BasePage {
   constructor(page) {
     this.page = page;
@@ -17,15 +11,11 @@ class BasePage {
     await this.page.goto(url, { waitUntil: 'networkidle' });
   }
 
-  /**
-   * Wait for page to load completely
-   */
   async waitForLoadState() {
     await this.page.waitForLoadState('networkidle');
   }
 
   /**
-   * Wait for element to be visible
    * @param {string} selector - Element selector
    * @param {number} timeout - Timeout in milliseconds
    */
@@ -77,8 +67,7 @@ class BasePage {
   }
 
   /**
-   * Take screenshot
-   * @param {string} name - Screenshot name
+   * @param {string} name 
    */
   async takeScreenshot(name) {
     await this.page.screenshot({ 
@@ -101,6 +90,84 @@ class BasePage {
    */
   getCurrentUrl() {
     return this.page.url();
+  }
+
+  /**
+   * @param {Array<string>} selectors 
+   * @param {string} fallbackUrl 
+   * @returns {Promise<void>}
+   */
+  async clickTreeMenuItem(selectors, fallbackUrl = null) {
+    const contexts = [this.page, ...this.page.frames()];
+    
+    for (const ctx of contexts) {
+      for (const sel of selectors) {
+        const loc = ctx.locator(sel);
+        if (await loc.count()) {
+          await loc.first().click({ timeout: 15000 });
+          await this.waitForLoadState();
+          return;
+        }
+      }
+    }
+    
+    if (fallbackUrl) {
+      await this.navigate(fallbackUrl);
+    }
+  }
+
+  /**
+   * @param {Array<string>} selectors 
+   * @param {Array<string>} selectors - Array of selectors to try
+   * @returns {Promise<boolean>} True if clicked successfully
+   */
+  async clickWithFallbacks(selectors) {
+    for (const sel of selectors) {
+      if (await this.isVisible(sel)) {
+        await this.click(sel);
+        await this.waitForLoadState();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param {Array<string>} rowSelectors 
+   * @param {Array<string>} tableSelectors 
+   * @param {Array<string>} headingSelectors 
+   * @returns {Promise<boolean>}
+   */
+  async isContentVisible(rowSelectors = [], tableSelectors = [], headingSelectors = []) {
+    // Check rows
+    for (const sel of rowSelectors) {
+      if ((await this.page.locator(sel).count()) > 0) return true;
+    }
+    // Check tables
+    for (const sel of tableSelectors) {
+      if (await this.isVisible(sel)) return true;
+    }
+    // Check headings
+    for (const sel of headingSelectors) {
+      if (await this.isVisible(sel)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Generic method to get sample rows from table
+   * @param {string} rowSelector - Selector for table rows
+   * @param {number} limit - Maximum number of rows to return
+   * @returns {Promise<Array<string>>}
+   */
+  async getSampleRows(rowSelector, limit = 3) {
+    const rows = await this.page.locator(rowSelector).all();
+    const items = [];
+    for (const row of rows.slice(0, limit)) {
+      const text = (await row.innerText()).trim();
+      if (text) items.push(text);
+    }
+    return items;
   }
 }
 

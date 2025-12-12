@@ -4,7 +4,8 @@ const LoginPage = require('../pages/LoginPage');
 const CoursesPage = require('../pages/CoursesPage');
 const GradesPage = require('../pages/GradesPage');
 const StudentSertificateApplicationPage = require('../pages/StudentSertificateApplicationPage');
-const AttendanceRecordPage = require('../pages/AttendanceRecod');
+const AttendanceRecordPage = require('../pages/AttendanceRecord');
+const ELSPage = require('../pages/ELS_Reports');
 
 test.describe('Post-login Navigation - IUS SIS', () => {
   // Set timeout to 5 minutes (300000ms) per test to allow all combinations to complete
@@ -15,6 +16,22 @@ test.describe('Post-login Navigation - IUS SIS', () => {
   test.beforeAll(() => {
     test.skip(!username || !password, 'Provide IUS_USERNAME and IUS_PASSWORD in environment to run these tests.');
   });
+
+  /**
+   * Helper function to perform login and verify success
+   * @param {Page} page - Playwright page object
+   * @returns {Promise<void>}
+   */
+  async function performLogin(page) {
+    const loginPage = new LoginPage(page);
+    const homePage = new HomePage(page);
+    
+    await loginPage.goToLogin();
+    await loginPage.login(username, password);
+    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(2000);
+    expect(await homePage.isLoggedIn()).toBeTruthy();
+  }
 
   async function clickTreeAndCapture(page, selectors, directUrl) {
     const context = page.context();
@@ -50,16 +67,8 @@ test.describe('Post-login Navigation - IUS SIS', () => {
    * This reduces code duplication across parallel batch tests.
    */
   async function testAttendanceRecordsForYearRange(page, startYear, endYear, batchName) {
-    const homePage = new HomePage(page);
-    const loginPage = new LoginPage(page);
-    const attendanceRecordPage = new AttendanceRecordPage(page);
-
     // Login
-    await loginPage.goToLogin();
-    await loginPage.login(username, password);
-    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    expect(await homePage.isLoggedIn()).toBeTruthy();
+    await performLogin(page);
 
     // Navigate to Attendance Record (capture popup if it opens like sis portal)
     const selectors = [
@@ -233,11 +242,11 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     // Capture screenshot evidence
     await scaPageHandle.screenshot({ path: 'test-results/screenshots/student-certificate-application.png', fullPage: true });
   });
-  */
+  
   // Parallel batch tests for Attendance Records
   // Split into 5 batches: each tests 5 years × 7 semesters = 35 combinations
   // All batches run in parallel for faster execution
-
+  */
   test('TC-023-Batch1: Attendance Record - Years 1-5 with all semesters', async ({ page }) => {
     test.setTimeout(300000); // 5 minutes per batch (35 combinations)
     await testAttendanceRecordsForYearRange(page, 1, 5, '1');
@@ -262,5 +271,35 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 21, 25, '5');
   });
+/*
+  test('TC-024: Navigate to ELS Report after login and capture evidence', async ({ page }) => {
+    await performLogin(page);
+
+    const selectors = [
+      '#ctl00_treeMenu12 > li:nth-child(9) span.file',
+      '#ctl00_treeMenu12 span.file:has-text("ELS Report")',
+      '#ctl00_treeMenu12 span.file[menuurl*="Ogr0320"]',
+      '#ctl00_treeMenu12 span.file[menuurl*="ogr0320"]'
+    ];
+    const elsPageHandle = await clickTreeAndCapture(
+      page,
+      selectors,
+      '/ogrenci/ogr0320/default.aspx?lang=en-US'
+    );
+
+    const elsPage = new ELSPage(elsPageHandle);
+    
+    await elsPage.clickELSActionButton();
+    await elsPageHandle.waitForTimeout(2000); // Wait for report to load
+
+    const hasELS = await elsPage.isELSListVisible();
+    expect(hasELS).toBeTruthy();
+
+    const elsData = await elsPage.getSampleELS();
+    console.log('Sample ELS report:', elsData);
+
+    await elsPageHandle.screenshot({ path: 'test-results/screenshots/els-report.png', fullPage: true });
+  });
+  */
 });
 
