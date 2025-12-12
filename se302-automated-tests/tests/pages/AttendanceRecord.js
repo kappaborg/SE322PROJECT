@@ -43,7 +43,7 @@ class AttendanceRecordPage extends BasePage {
 		this.buttonListele = "#btnListele";
 		this.buttonApply = "#btnListele_input";
 		this.buttonListeleClientState = "#btnListele_ClientState";
-		this.addtofavorite = "#AppHeader1_ctl08 > input:nth-child(1)";
+		this.addtofavoritebutton = "#AppHeader1_ctl08 > input:nth-child(1)";
 
 		// Common grade list structures
 		this.documentsTable = "table, .grid, .data-table";
@@ -163,10 +163,8 @@ class AttendanceRecordPage extends BasePage {
 	}
 
 	async addtofavorite() {
-		if (await this.isVisible(this.buttonApply)) {
-			await this.click(this.addtofavorite);
-			await this.waitForLoadState();
-		}
+		await this.click(this.addtofavoritebutton);
+		await this.waitForLoadState();
 	}
 
 	async isdocumentsListVisible() {
