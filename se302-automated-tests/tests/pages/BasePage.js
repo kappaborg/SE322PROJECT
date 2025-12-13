@@ -117,6 +117,41 @@ class BasePage {
   }
 
   /**
+   * Click tree menu item and capture popup if it opens
+   * @param {Array<string>} selectors - Array of selectors to try
+   * @param {string} directUrl - Fallback URL if navigation fails
+   * @returns {Promise<Page>} The page or popup page
+   */
+  async clickTreeAndCapture(selectors, directUrl = null) {
+    const context = this.page.context();
+    const searchContexts = [this.page, ...this.page.frames()];
+
+    for (const ctx of searchContexts) {
+      for (const sel of selectors) {
+        const loc = ctx.locator(sel);
+        if (await loc.count()) {
+          const [popup] = await Promise.all([
+            context.waitForEvent('page').catch(() => null),
+            loc.first().click({ timeout: 15000 })
+          ]);
+          if (popup) {
+            await popup.waitForLoadState('domcontentloaded');
+            return popup;
+          }
+          await this.page.waitForLoadState('networkidle');
+          return this.page;
+        }
+      }
+    }
+
+    if (directUrl) {
+      await this.page.goto(directUrl, { waitUntil: 'networkidle' });
+      return this.page;
+    }
+    throw new Error('Navigation target not found and no direct URL provided');
+  }
+
+  /**
    * @param {Array<string>} selectors 
    * @param {Array<string>} selectors - Array of selectors to try
    * @returns {Promise<boolean>} True if clicked successfully

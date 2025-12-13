@@ -238,6 +238,54 @@ class LoginPage extends BasePage {
     // If URL changed from login page, user likely logged in
     return !currentUrl.includes('login.aspx');
   }
+
+  /**
+   * Check if username field is visible and accessible
+   * @returns {Promise<boolean>} True if username field is visible
+   */
+  async isUsernameFieldVisible() {
+    if (await this.page.locator(this.usernameInput).count() > 0) {
+      return await this.isVisible(this.usernameInput);
+    }
+    for (const selector of this.usernameFallbacks) {
+      if (await this.page.locator(selector).count() > 0) {
+        return await this.isVisible(selector);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if password field is visible and accessible
+   * @returns {Promise<boolean>} True if password field is visible
+   */
+  async isPasswordFieldVisible() {
+    if (await this.page.locator(this.passwordInput).count() > 0) {
+      return await this.isVisible(this.passwordInput);
+    }
+    for (const selector of this.passwordFallbacks) {
+      if (await this.page.locator(selector).count() > 0) {
+        return await this.isVisible(selector);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if login button is visible and accessible
+   * @returns {Promise<boolean>} True if login button is visible
+   */
+  async isLoginButtonVisible() {
+    if (await this.page.locator(this.loginButton).count() > 0) {
+      return await this.isVisible(this.loginButton);
+    }
+    for (const selector of this.loginButtonFallbacks) {
+      if (await this.page.locator(selector).count() > 0) {
+        return await this.isVisible(selector);
+      }
+    }
+    return false;
+  }
 }
 
 module.exports = LoginPage;

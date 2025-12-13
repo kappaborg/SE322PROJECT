@@ -1,0 +1,19 @@
+{
+  "name": "webtest-server",
+  "version": "1.0.0",
+  "description": "Backend server for WebTest dashboard",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "chokidar": "^3.5.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
+  }
+}

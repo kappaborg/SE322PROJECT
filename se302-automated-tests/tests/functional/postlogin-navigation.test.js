@@ -34,34 +34,6 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     expect(await homePage.isLoggedIn()).toBeTruthy();
   }
 
-  async function clickTreeAndCapture(page, selectors, directUrl) {
-    const context = page.context();
-    const searchContexts = [page, ...page.frames()];
-
-    for (const ctx of searchContexts) {
-      for (const sel of selectors) {
-        const loc = ctx.locator(sel);
-        if (await loc.count()) {
-          const [popup] = await Promise.all([
-            context.waitForEvent('page').catch(() => null),
-            loc.first().click({ timeout: 15000 })
-          ]);
-          if (popup) {
-            await popup.waitForLoadState('domcontentloaded');
-            return popup;
-          }
-          await page.waitForLoadState('networkidle');
-          return page;
-        }
-      }
-    }
-
-    if (directUrl) {
-      await page.goto(directUrl, { waitUntil: 'networkidle' });
-      return page;
-    }
-    throw new Error('Navigation target not found and no direct URL provided');
-  }
 
 
   
@@ -71,24 +43,21 @@ test.describe('Post-login Navigation - IUS SIS', () => {
    * This reduces code duplication across parallel batch tests.
    */
   async function testAttendanceRecordsForYearRange(page, startYear, endYear, batchName) {
-    // Login
     await performLogin(page);
 
-    // Navigate to Attendance Record (capture popup if it opens like sis portal)
+    const attendancePage = new AttendanceRecordPage(page);
     const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(6) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("Attendance Record")',
+      attendancePage.attendanceRecord,
+      ...attendancePage.documentsNavLink,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0123"]'
     ];
-    const attendanceRecordPageHandle = await clickTreeAndCapture(
-      page,
+    const attendanceRecordPageHandle = await attendancePage.clickTreeAndCapture(
       selectors,
       '/Ogrenci/Ogr0123/Default.aspx?lang=en-US'
     );
 
-    const attendancePage = new AttendanceRecordPage(attendanceRecordPageHandle);
+    const attendancePageInstance = new AttendanceRecordPage(attendanceRecordPageHandle);
     
-    // Define all semesters to test (using index-based selection)
     const semesters = [
       { name: 'first', index: 1 },
       { name: 'fall', index: 2 },
@@ -99,17 +68,15 @@ test.describe('Post-login Navigation - IUS SIS', () => {
       { name: 'session4', index: 7 },
     ];
 
-    // Test all combinations: years (startYear-endYear) × semesters (7)
     for (let yearIndex = startYear; yearIndex <= endYear; yearIndex++) {
       for (const semester of semesters) {
-        // Flow: Select Year -> Select Semester -> Click List
-        await attendancePage.selectYear(yearIndex);
-        await attendancePage.waitForLoadState();
+        await attendancePageInstance.selectYear(yearIndex);
+        await attendancePageInstance.waitForLoadState();
         
-        await attendancePage.selectSemester(semester.index);
-        await attendancePage.waitForLoadState();
+        await attendancePageInstance.selectSemester(semester.index);
+        await attendancePageInstance.waitForLoadState();
         
-        await attendancePage.clickButtonListele();
+        await attendancePageInstance.clickButtonListele();
         
         await attendanceRecordPageHandle
           .waitForSelector(
@@ -118,15 +85,12 @@ test.describe('Post-login Navigation - IUS SIS', () => {
           )
           .catch(() => {});
         
-        // Validate attendance record list presence
-        const hasAttendanceRecord = await attendancePage.isdocumentsListVisible();
+        const hasAttendanceRecord = await attendancePageInstance.isdocumentsListVisible();
         expect(hasAttendanceRecord).toBeTruthy();
         
-        // Capture sample rows for logging
-        const attendanceRecord = await attendancePage.getSampleAttendanceRecord();
+        const attendanceRecord = await attendancePageInstance.getSampleAttendanceRecord();
         console.log(`[Batch ${batchName}] Sample attendance record (Year ${yearIndex}, ${semester.name}):`, attendanceRecord);
         
-        // Capture screenshot evidence with batch, year and semester in filename
         await attendanceRecordPageHandle.screenshot({
           path: `test-results/screenshots/attendance-record-batch${batchName}-year${yearIndex}-${semester.name}.png`,
           fullPage: true,
@@ -134,124 +98,79 @@ test.describe('Post-login Navigation - IUS SIS', () => {
       }
     }
   }
-  /*
-  test('TC-020: Navigate to Courses after login and capture evidence', async ({ page }) => {
-    const homePage = new HomePage(page);
-    const loginPage = new LoginPage(page);
+  test('TC-002: Navigate to Courses after login and capture evidence', async ({ page }) => {
+    await performLogin(page);
+
     const coursesPage = new CoursesPage(page);
-
-    // Login
-    await loginPage.goToLogin();
-    await loginPage.login(username, password);
-    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    expect(await homePage.isLoggedIn()).toBeTruthy();
-
-    // Navigate to Courses (capture popup if it opens)
     const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(1) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("Course Schedule")',
+      coursesPage.courseSchedule,
+      ...coursesPage.coursesNavLink,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0205"]'
     ];
-    const coursePageHandle = await clickTreeAndCapture(
-      page,
+    const coursePageHandle = await coursesPage.clickTreeAndCapture(
       selectors,
       '/Ogrenci/Ogr0205/Default.aspx?lang=en-US'
     );
 
-    // Validate course list presence
-    const hasCourses = await new CoursesPage(coursePageHandle).isCourseListVisible();
+    const coursePage = new CoursesPage(coursePageHandle);
+    const hasCourses = await coursePage.isCourseListVisible();
     expect(hasCourses).toBeTruthy();
 
-    // Capture sample rows for logging
-    const courses = await new CoursesPage(coursePageHandle).getSampleCourses();
+    const courses = await coursePage.getSampleCourses();
     console.log('Sample courses:', courses);
 
-    // Capture screenshot evidence
     await coursePageHandle.screenshot({ path: 'test-results/screenshots/courses.png', fullPage: true });
   });
 
-  /*test('TC-021: Navigate to Grades after login and capture evidence', async ({ page }) => {
-    const homePage = new HomePage(page);
-    const loginPage = new LoginPage(page);
+  test('TC-003: Navigate to Grades after login and capture evidence', async ({ page }) => {
+    await performLogin(page);
+
     const gradesPage = new GradesPage(page);
-
-    // Login
-    await loginPage.goToLogin();
-    await loginPage.login(username, password);
-    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    expect(await homePage.isLoggedIn()).toBeTruthy();
-
-    // Navigate to Grades (capture popup if it opens)
     const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(2) span.file',
-      '#ctl00_treeMenu12 > li:nth-child(3) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("Grade Details")',
-      '#ctl00_treeMenu12 span.file:has-text("Academic Record (Transcript)")',
+      gradesPage.gradeDetails,
+      gradesPage.academicRecord,
+      ...gradesPage.gradesNavLink,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0201"]',
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0204"]'
     ];
-    const gradesPageHandle = await clickTreeAndCapture(
-      page,
+    const gradesPageHandle = await gradesPage.clickTreeAndCapture(
       selectors,
       '/Ogrenci/Ogr0201/Default.aspx?lang=en-US'
     );
 
-    // Validate grades list presence
-    const hasGrades = await new GradesPage(gradesPageHandle).isGradesListVisible();
+    const gradePage = new GradesPage(gradesPageHandle);
+    const hasGrades = await gradePage.isGradesListVisible();
     expect(hasGrades).toBeTruthy();
 
-    // Capture sample rows for logging
-    const grades = await new GradesPage(gradesPageHandle).getSampleGrades();
+    const grades = await gradePage.getSampleGrades();
     console.log('Sample grades:', grades);
 
-    // Capture screenshot evidence
     await gradesPageHandle.screenshot({ path: 'test-results/screenshots/grades.png', fullPage: true });
   });
-  test('TC-022: Navigate to Student Certificate Application after login and capture evidence', async ({ page }) => {
-    const homePage = new HomePage(page);
-    const loginPage = new LoginPage(page);
+
+  test('TC-014: Navigate to Student Certificate Application after login and capture evidence', async ({ page }) => {
+    await performLogin(page);
+
     const studentCertificateApplicationPage = new StudentSertificateApplicationPage(page);
-
-    // Login
-    await loginPage.goToLogin();
-    await loginPage.login(username, password);
-    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    expect(await homePage.isLoggedIn()).toBeTruthy();
-
-    // Navigate to Student Certificate Application (capture popup if it opens)
     const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(8) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("Student Certificate Application")',
+      studentCertificateApplicationPage.certificateDetails,
+      ...studentCertificateApplicationPage.documentsNavLink,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0170"]'
     ];
-    const scaPageHandle = await clickTreeAndCapture(
-      page,
+    const scaPageHandle = await studentCertificateApplicationPage.clickTreeAndCapture(
       selectors,
       '/Ogrenci/Ogr0170/Default.aspx?lang=en-US'
     );
 
-    // Validate student certificate application list presence
-    const hasStudentCertificateApplication = await new StudentSertificateApplicationPage(scaPageHandle).isdocumentsListVisible();
+    const scaPage = new StudentSertificateApplicationPage(scaPageHandle);
+    const hasStudentCertificateApplication = await scaPage.isdocumentsListVisible();
     expect(hasStudentCertificateApplication).toBeTruthy();
 
-    // Capture sample rows for logging
-    const studentCertificateApplication = await new StudentSertificateApplicationPage(scaPageHandle).getSampledocuments();
+    const studentCertificateApplication = await scaPage.getSampledocuments();
     console.log('Sample student certificate application:', studentCertificateApplication);
 
-    // Capture screenshot evidence
     await scaPageHandle.screenshot({ path: 'test-results/screenshots/student-certificate-application.png', fullPage: true });
   });
-  
-  // Parallel batch tests for Attendance Records
-  // Split into 5 batches: each tests 5 years × 7 semesters = 35 combinations
-  // All batches run in parallel for faster execution
-  */
-  /**
-
-*/
 
   async function testPaymentDetails(page, batchName) {
     const homePage = new HomePage(page);
@@ -263,21 +182,21 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     await page.waitForTimeout(2000);
     expect(await homePage.isLoggedIn()).toBeTruthy();
 
+    const contractPage = new ContractPage(page);
     const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(12) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("Contract and Payment Records")',
+      contractPage.contractsLink,
+      ...contractPage.contractsNavLink,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0137"]'
     ];
-    const contractPageHandle = await clickTreeAndCapture(
-      page,
+    const contractPageHandle = await contractPage.clickTreeAndCapture(
       selectors,
       '/Ogrenci/Ogr0137/Default.aspx?lang=en-US'
     );
 
-    const contractPage = new ContractPage(contractPageHandle);
+    const contractPageInstance = new ContractPage(contractPageHandle);
     
-    await contractPage.waitForElement(contractPage.table);
-    const rows = await contractPage.getAllTableRows();
+    await contractPageInstance.waitForElement(contractPageInstance.table);
+    const rows = await contractPageInstance.getAllTableRows();
     const totalRows = rows.length;
     
     console.log(`[Batch ${batchName}] Found ${totalRows} rows to test`);
@@ -285,26 +204,26 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     for (let rowIndex = 1; rowIndex <= totalRows; rowIndex++) {
         if (rowIndex > 1) {
             await contractPageHandle.goto('/Ogrenci/Ogr0137/Default.aspx?lang=en-US', { waitUntil: 'networkidle' });
-            await contractPage.waitForElement(contractPage.table);
-            await contractPage.waitForLoadState();
+            await contractPageInstance.waitForElement(contractPageInstance.table);
+            await contractPageInstance.waitForLoadState();
         }
         
-        await contractPage.selectTableRow(rowIndex);
-        await contractPage.waitForLoadState();
+        await contractPageInstance.selectTableRow(rowIndex);
+        await contractPageInstance.waitForLoadState();
         
-        await contractPage.clickButtonReport();
-        await contractPage.waitForLoadState();
+        await contractPageInstance.clickButtonReport();
+        await contractPageInstance.waitForLoadState();
         
         await contractPageHandle
           .waitForSelector(
-            `${contractPage.tableResults}, ${contractPage.pageHeading}`,
+            `${contractPageInstance.tableResults}, ${contractPageInstance.pageHeading}`,
             { timeout: 20000, state: 'visible' }
           )
           .catch(() => {});
         
         await contractPageHandle.waitForTimeout(2000);
         
-        const hasContractRecord = await contractPage.isdocumentsListVisible();
+        const hasContractRecord = await contractPageInstance.isdocumentsListVisible();
         expect(hasContractRecord).toBeTruthy();
         
         console.log(`[Batch ${batchName}] Row ${rowIndex}/${totalRows} tested successfully`);
@@ -318,63 +237,61 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     console.log(`[Batch ${batchName}] All ${totalRows} rows tested successfully`);
   }
 
-  /*
-  test('TC-023-Batch1: Attendance Record - Years 1-5 with all semesters', async ({ page }) => {
-    test.setTimeout(300000); // 5 minutes per batch (35 combinations)
+  test('TC-015: Attendance Record - Years 1-5 with all semesters', async ({ page }) => {
+    test.setTimeout(300000);
     await testAttendanceRecordsForYearRange(page, 1, 5, '1');
   });
 
-  test('TC-023-Batch2: Attendance Record - Years 6-10 with all semesters', async ({ page }) => {
+  test('TC-016: Attendance Record - Years 6-10 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 6, 10, '2');
   });
 
-  test('TC-023-Batch3: Attendance Record - Years 11-15 with all semesters', async ({ page }) => {
+  test('TC-017: Attendance Record - Years 11-15 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 11, 15, '3');
   });
 
-  test('TC-023-Batch4: Attendance Record - Years 16-20 with all semesters', async ({ page }) => {
+  test('TC-018: Attendance Record - Years 16-20 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 16, 20, '4');
   });
 
-  test('TC-023-Batch5: Attendance Record - Years 21-25 with all semesters', async ({ page }) => {
+  test('TC-019: Attendance Record - Years 21-25 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 21, 25, '5');
   });
-  */
-  test('TC-025: Navigate to Contract and Payment Details after login and capture evidence', async ({ page }) => {
-    await testPaymentDetails(page, '1');
-  });
-/*
-  test('TC-024: Navigate to ELS Report after login and capture evidence', async ({ page }) => {
+  test('TC-020: Navigate to ELS Report after login and capture evidence', async ({ page }) => {
     await performLogin(page);
 
+    const elsPage = new ELSPage(page);
     const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(9) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("ELS Report")',
+      elsPage.elsLink,
+      ...elsPage.elsNavLink,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0320"]',
       '#ctl00_treeMenu12 span.file[menuurl*="ogr0320"]'
     ];
-    const elsPageHandle = await clickTreeAndCapture(
-      page,
+    const elsPageHandle = await elsPage.clickTreeAndCapture(
       selectors,
       '/ogrenci/ogr0320/default.aspx?lang=en-US'
     );
 
-    const elsPage = new ELSPage(elsPageHandle);
+    const elsPageInstance = new ELSPage(elsPageHandle);
     
-    await elsPage.clickELSActionButton();
-    await elsPageHandle.waitForTimeout(2000); // Wait for report to load
+    await elsPageInstance.clickELSActionButton();
+    await elsPageHandle.waitForTimeout(2000);
 
-    const hasELS = await elsPage.isELSListVisible();
+    const hasELS = await elsPageInstance.isELSListVisible();
     expect(hasELS).toBeTruthy();
 
-    const elsData = await elsPage.getSampleELS();
+    const elsData = await elsPageInstance.getSampleELS();
     console.log('Sample ELS report:', elsData);
 
     await elsPageHandle.screenshot({ path: 'test-results/screenshots/els-report.png', fullPage: true });
-  });*/
+  });
+
+  test('TC-021: Navigate to Contract and Payment Details after login and capture evidence', async ({ page }) => {
+    await testPaymentDetails(page, '1');
+  });
   
 });
