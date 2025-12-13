@@ -27,6 +27,8 @@ class AttendanceRecordPage extends BasePage {
     // Buttons
     this.buttonListele = '#btnListele';
     this.buttonApply = '#btnListele_input';
+    this.buttonListeleClientState = '#btnListele_ClientState';
+    this.addtofavoritebutton = '#AppHeader1_ctl08 > input:nth-child(1)';
 
     // Common grade list structures
     this.documentsTable = 'table, .grid, .data-table';
@@ -38,12 +40,26 @@ class AttendanceRecordPage extends BasePage {
   }
 
   async goTodocuments() {
+    const contexts = [this.page, ...this.page.frames()];
     const selectors = [
       this.attendanceRecord,
       '#ctl00_treeMenu12 span.file[menuurl*="Ogr0123"]',
-      ...this.documentsNavLink
+      ...this.documentsNavLink,
     ];
-    await this.clickTreeMenuItem(selectors, '/Ogrenci/Ogr0123/Default.aspx?lang=en-US');
+
+    for (const ctx of contexts) {
+      for (const sel of selectors) {
+        const loc = ctx.locator(sel);
+        if (await loc.count()) {
+          await loc.first().click({ timeout: 15000 });
+          await this.waitForLoadState();
+          return;
+        }
+      }
+    }
+
+    // Fallback direct navigation
+    await this.navigate('/Ogrenci/Ogr0123/Default.aspx?lang=en-US');
   }
   /**
    * Selects a semester from the semester dropdown (1-7).
@@ -112,6 +128,14 @@ class AttendanceRecordPage extends BasePage {
   }
 
   /**
+   * Add page to favorites
+   */
+  async addtofavorite() {
+    await this.click(this.addtofavoritebutton);
+    await this.waitForLoadState();
+  }
+
+  /**
    * Returns true if attendance record list is visible
    */
   async isdocumentsListVisible() {
@@ -131,4 +155,3 @@ class AttendanceRecordPage extends BasePage {
 }
 
 module.exports = AttendanceRecordPage;
-

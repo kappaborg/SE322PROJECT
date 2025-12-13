@@ -47,4 +47,3 @@ class ELSPage extends BasePage {
 }
 
 module.exports = ELSPage;
-

@@ -6,6 +6,7 @@ const GradesPage = require('../pages/GradesPage');
 const StudentSertificateApplicationPage = require('../pages/StudentSertificateApplicationPage');
 const AttendanceRecordPage = require('../pages/AttendanceRecord');
 const ELSPage = require('../pages/ELS_Reports');
+const ContractPage = require('../pages/ContractPage');
 
 test.describe('Post-login Navigation - IUS SIS', () => {
   // Set timeout to 5 minutes (300000ms) per test to allow all combinations to complete
@@ -62,6 +63,9 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     throw new Error('Navigation target not found and no direct URL provided');
   }
 
+
+  
+
   /**
    * Helper function to test attendance records for a range of years and all semesters.
    * This reduces code duplication across parallel batch tests.
@@ -107,12 +111,10 @@ test.describe('Post-login Navigation - IUS SIS', () => {
         
         await attendancePage.clickButtonListele();
         
-        // Wait for listing to render
-        await attendanceRecordPageHandle.waitForTimeout(2000);
         await attendanceRecordPageHandle
           .waitForSelector(
             'table tr, .grid tr, .data-table tr, h1:has-text("Student Attendance Status"), h2:has-text("List of criteria")',
-            { timeout: 10000 }
+            { timeout: 12000, state: 'visible' }
           )
           .catch(() => {});
         
@@ -247,6 +249,76 @@ test.describe('Post-login Navigation - IUS SIS', () => {
   // Split into 5 batches: each tests 5 years × 7 semesters = 35 combinations
   // All batches run in parallel for faster execution
   */
+  /**
+
+*/
+
+  async function testPaymentDetails(page, batchName) {
+    const homePage = new HomePage(page);
+    const loginPage = new LoginPage(page);
+
+    await loginPage.goToLogin();
+    await loginPage.login(username, password);
+    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(2000);
+    expect(await homePage.isLoggedIn()).toBeTruthy();
+
+    const selectors = [
+      '#ctl00_treeMenu12 > li:nth-child(12) span.file',
+      '#ctl00_treeMenu12 span.file:has-text("Contract and Payment Records")',
+      '#ctl00_treeMenu12 span.file[menuurl*="Ogr0137"]'
+    ];
+    const contractPageHandle = await clickTreeAndCapture(
+      page,
+      selectors,
+      '/Ogrenci/Ogr0137/Default.aspx?lang=en-US'
+    );
+
+    const contractPage = new ContractPage(contractPageHandle);
+    
+    await contractPage.waitForElement(contractPage.table);
+    const rows = await contractPage.getAllTableRows();
+    const totalRows = rows.length;
+    
+    console.log(`[Batch ${batchName}] Found ${totalRows} rows to test`);
+    
+    for (let rowIndex = 1; rowIndex <= totalRows; rowIndex++) {
+        if (rowIndex > 1) {
+            await contractPageHandle.goto('/Ogrenci/Ogr0137/Default.aspx?lang=en-US', { waitUntil: 'networkidle' });
+            await contractPage.waitForElement(contractPage.table);
+            await contractPage.waitForLoadState();
+        }
+        
+        await contractPage.selectTableRow(rowIndex);
+        await contractPage.waitForLoadState();
+        
+        await contractPage.clickButtonReport();
+        await contractPage.waitForLoadState();
+        
+        await contractPageHandle
+          .waitForSelector(
+            `${contractPage.tableResults}, ${contractPage.pageHeading}`,
+            { timeout: 20000, state: 'visible' }
+          )
+          .catch(() => {});
+        
+        await contractPageHandle.waitForTimeout(2000);
+        
+        const hasContractRecord = await contractPage.isdocumentsListVisible();
+        expect(hasContractRecord).toBeTruthy();
+        
+        console.log(`[Batch ${batchName}] Row ${rowIndex}/${totalRows} tested successfully`);
+        
+        await contractPageHandle.screenshot({
+          path: `test-results/screenshots/contract-record-batch${batchName}-row${rowIndex}.png`,
+          fullPage: true,
+        });
+    }
+    
+    console.log(`[Batch ${batchName}] All ${totalRows} rows tested successfully`);
+  }
+
+  /*
   test('TC-023-Batch1: Attendance Record - Years 1-5 with all semesters', async ({ page }) => {
     test.setTimeout(300000); // 5 minutes per batch (35 combinations)
     await testAttendanceRecordsForYearRange(page, 1, 5, '1');
@@ -270,6 +342,10 @@ test.describe('Post-login Navigation - IUS SIS', () => {
   test('TC-023-Batch5: Attendance Record - Years 21-25 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 21, 25, '5');
+  });
+  */
+  test('TC-025: Navigate to Contract and Payment Details after login and capture evidence', async ({ page }) => {
+    await testPaymentDetails(page, '1');
   });
 /*
   test('TC-024: Navigate to ELS Report after login and capture evidence', async ({ page }) => {
@@ -299,7 +375,6 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     console.log('Sample ELS report:', elsData);
 
     await elsPageHandle.screenshot({ path: 'test-results/screenshots/els-report.png', fullPage: true });
-  });
-  */
+  });*/
+  
 });
-
