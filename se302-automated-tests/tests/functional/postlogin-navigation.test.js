@@ -1,142 +1,202 @@
-const { test, expect } = require('@playwright/test');
-const HomePage = require('../pages/HomePage');
-const LoginPage = require('../pages/LoginPage');
-const CoursesPage = require('../pages/CoursesPage');
-const GradesPage = require('../pages/GradesPage');
-const StudentSertificateApplicationPage = require('../pages/StudentSertificateApplicationPage');
-const AttendanceRecordPage = require('../pages/AttendanceRecord');
-const ELSPage = require('../pages/ELS_Reports');
-const ContractPage = require('../pages/ContractPage');
+const { test, expect } = require("@playwright/test");
+const HomePage = require("../pages/HomePage");
+const LoginPage = require("../pages/LoginPage");
+//const CoursesPage = require("../pages/CoursesPage");
+//const GradesPage = require("../pages/GradesPage");
+//const StudentSertificateApplicationPage = require("../pages/StudentSertificateApplicationPage");
+const AttendanceRecordPage = require("../pages/AttendanceRecord");
+//const ELSPage = require("../pages/ELS_Reports");
+//const ContractPage = require("../pages/ContractPage");
 
-test.describe('Post-login Navigation - IUS SIS', () => {
-  // Set timeout to 5 minutes (300000ms) per test to allow all combinations to complete
-  test.setTimeout(300000);
-  const username = process.env.IUS_USERNAME;
-  const password = process.env.IUS_PASSWORD;
+test.describe("Post-login Navigation - IUS SIS", () => {
+	// Set timeout to 5 minutes (300000ms) per test to allow all combinations to complete
+	test.setTimeout(300000);
+	const username = process.env.IUS_USERNAME;
+	const password = process.env.IUS_PASSWORD;
 
-  test.beforeAll(() => {
-    test.skip(!username || !password, 'Provide IUS_USERNAME and IUS_PASSWORD in environment to run these tests.');
-  });
+	test.beforeAll(() => {
+		test.skip(
+			!username || !password,
+			"Provide IUS_USERNAME and IUS_PASSWORD in environment to run these tests.",
+		);
+	});
 
-  /**
-   * Helper function to perform login and verify success
-   * @param {Page} page - Playwright page object
-   * @returns {Promise<void>}
-   */
-  async function performLogin(page) {
-    const loginPage = new LoginPage(page);
-    const homePage = new HomePage(page);
-    
-    await loginPage.goToLogin();
-    await loginPage.login(username, password);
-    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    expect(await homePage.isLoggedIn()).toBeTruthy();
-  }
+	/**
+	 * Helper function to perform login and verify success
+	 * @param {Page} page - Playwright page object
+	 * @returns {Promise<void>}
+	 */
+	async function testAttendanceFavouriteButton(page) {
+		// Login
+		await performLogin(page);
 
-  async function clickTreeAndCapture(page, selectors, directUrl) {
-    const context = page.context();
-    const searchContexts = [page, ...page.frames()];
+		// Navigate to Attendance Record (capture popup if it opens like sis portal)
+		const selectors = [
+			"#ctl00_treeMenu12 > li:nth-child(6) span.file",
+			'#ctl00_treeMenu12 span.file:has-text("Attendance Record")',
+			'#ctl00_treeMenu12 span.file[menuurl*="Ogr0123"]',
+		];
+		const attendanceRecordPageHandle = await clickTreeAndCapture(
+			page,
+			selectors,
+			"/Ogrenci/Ogr0123/Default.aspx?lang=en-US",
+		);
 
-    for (const ctx of searchContexts) {
-      for (const sel of selectors) {
-        const loc = ctx.locator(sel);
-        if (await loc.count()) {
-          const [popup] = await Promise.all([
-            context.waitForEvent('page').catch(() => null),
-            loc.first().click({ timeout: 15000 })
-          ]);
-          if (popup) {
-            await popup.waitForLoadState('domcontentloaded');
-            return popup;
-          }
-          await page.waitForLoadState('networkidle');
-          return page;
-        }
-      }
-    }
+		const attendancePage = new AttendanceRecordPage(attendanceRecordPageHandle);
+		attendancePage.addtofavorite();
+		await page.waitForTimeout(2000);
 
-    if (directUrl) {
-      await page.goto(directUrl, { waitUntil: 'networkidle' });
-      return page;
-    }
-    throw new Error('Navigation target not found and no direct URL provided');
-  }
+		await attendanceRecordPageHandle.screenshot({
+			path: `test-results/screenshots/attendance-record-favourite-button.png`,
+			fullPage: true,
+		});
+	}
 
+	async function testHomeMenuSearch(page, testInput) {
+		await performLogin(page);
+		//homePage is cause an error in code but somehow screenshot still works well even panel throws the error
+		// normally when we use screenshot we must hold the screenshot instance with testHomeMenuSearchHandle but This
+		// time screenshot doesnt work while panel says there is no error.
+		// also search field doesnt work when i write something
 
-  
+		const selectors = ["#txtSearch"];
+		const testHomeMenuSearchHandle = await clickTreeAndCapture(
+			page,
+			selectors,
+			"dashboard.aspx",
+		);
 
-  /**
-   * Helper function to test attendance records for a range of years and all semesters.
-   * This reduces code duplication across parallel batch tests.
-   */
-  async function testAttendanceRecordsForYearRange(page, startYear, endYear, batchName) {
-    // Login
-    await performLogin(page);
+		const homePage = new HomePage(testHomeMenuSearchHandle);
+		await homePage.searchField(testInput);
+		await homePage.screenshot({
+			path: `test-results/screenshots/searchtest.png`,
+			fullPage: true,
+		});
+	}
 
-    // Navigate to Attendance Record (capture popup if it opens like sis portal)
-    const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(6) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("Attendance Record")',
-      '#ctl00_treeMenu12 span.file[menuurl*="Ogr0123"]'
-    ];
-    const attendanceRecordPageHandle = await clickTreeAndCapture(
-      page,
-      selectors,
-      '/Ogrenci/Ogr0123/Default.aspx?lang=en-US'
-    );
+	async function performLogin(page) {
+		const loginPage = new LoginPage(page);
+		const homePage = new HomePage(page);
 
-    const attendancePage = new AttendanceRecordPage(attendanceRecordPageHandle);
-    
-    // Define all semesters to test (using index-based selection)
-    const semesters = [
-      { name: 'first', index: 1 },
-      { name: 'fall', index: 2 },
-      { name: 'spring', index: 3 },
-      { name: 'session1', index: 4 },
-      { name: 'session2', index: 5 },
-      { name: 'session3', index: 6 },
-      { name: 'session4', index: 7 },
-    ];
+		await loginPage.goToLogin();
+		await loginPage.login(username, password);
+		await page
+			.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 })
+			.catch(() => {});
+		await page.waitForTimeout(2000);
+		expect(await homePage.isLoggedIn()).toBeTruthy();
+	}
 
-    // Test all combinations: years (startYear-endYear) × semesters (7)
-    for (let yearIndex = startYear; yearIndex <= endYear; yearIndex++) {
-      for (const semester of semesters) {
-        // Flow: Select Year -> Select Semester -> Click List
-        await attendancePage.selectYear(yearIndex);
-        await attendancePage.waitForLoadState();
-        
-        await attendancePage.selectSemester(semester.index);
-        await attendancePage.waitForLoadState();
-        
-        await attendancePage.clickButtonListele();
-        
-        // Wait for listing to render
-        await attendanceRecordPageHandle.waitForTimeout(2000);
-        await attendanceRecordPageHandle
-          .waitForSelector(
-            'table tr, .grid tr, .data-table tr, h1:has-text("Student Attendance Status"), h2:has-text("List of criteria")',
-            { timeout: 10000 }
-          )
-          .catch(() => {});
-        
-        // Validate attendance record list presence
-        const hasAttendanceRecord = await attendancePage.isdocumentsListVisible();
-        expect(hasAttendanceRecord).toBeTruthy();
-        
-        // Capture sample rows for logging
-        const attendanceRecord = await attendancePage.getSampleAttendanceRecord();
-        console.log(`[Batch ${batchName}] Sample attendance record (Year ${yearIndex}, ${semester.name}):`, attendanceRecord);
-        
-        // Capture screenshot evidence with batch, year and semester in filename
-        await attendanceRecordPageHandle.screenshot({
-          path: `test-results/screenshots/attendance-record-batch${batchName}-year${yearIndex}-${semester.name}.png`,
-          fullPage: true,
-        });
-      }
-    }
-  }
-  /*
+	async function clickTreeAndCapture(page, selectors, directUrl) {
+		const context = page.context();
+		const searchContexts = [page, ...page.frames()];
+
+		for (const ctx of searchContexts) {
+			for (const sel of selectors) {
+				const loc = ctx.locator(sel);
+				if (await loc.count()) {
+					const [popup] = await Promise.all([
+						context.waitForEvent("page").catch(() => null),
+						loc.first().click({ timeout: 15000 }),
+					]);
+					if (popup) {
+						await popup.waitForLoadState("domcontentloaded");
+						return popup;
+					}
+					await page.waitForLoadState("networkidle");
+					return page;
+				}
+			}
+		}
+
+		if (directUrl) {
+			await page.goto(directUrl, { waitUntil: "networkidle" });
+			return page;
+		}
+		throw new Error("Navigation target not found and no direct URL provided");
+	}
+
+	/**
+	 * Helper function to test attendance records for a range of years and all semesters.
+	 * This reduces code duplication across parallel batch tests.
+	 */
+	async function testAttendanceRecordsForYearRange(
+		page,
+		startYear,
+		endYear,
+		batchName,
+	) {
+		// Login
+		await performLogin(page);
+
+		// Navigate to Attendance Record (capture popup if it opens like sis portal)
+		const selectors = [
+			"#ctl00_treeMenu12 > li:nth-child(6) span.file",
+			'#ctl00_treeMenu12 span.file:has-text("Attendance Record")',
+			'#ctl00_treeMenu12 span.file[menuurl*="Ogr0123"]',
+		];
+		const attendanceRecordPageHandle = await clickTreeAndCapture(
+			page,
+			selectors,
+			"/Ogrenci/Ogr0123/Default.aspx?lang=en-US",
+		);
+
+		const attendancePage = new AttendanceRecordPage(attendanceRecordPageHandle);
+
+		// Define all semesters to test (using index-based selection)
+		const semesters = [
+			{ name: "first", index: 1 },
+			{ name: "fall", index: 2 },
+			{ name: "spring", index: 3 },
+			{ name: "session1", index: 4 },
+			{ name: "session2", index: 5 },
+			{ name: "session3", index: 6 },
+			{ name: "session4", index: 7 },
+		];
+
+		// Test all combinations: years (startYear-endYear) × semesters (7)
+		for (let yearIndex = startYear; yearIndex <= endYear; yearIndex++) {
+			for (const semester of semesters) {
+				// Flow: Select Year -> Select Semester -> Click List
+				await attendancePage.selectYear(yearIndex);
+				await attendancePage.waitForLoadState();
+
+				await attendancePage.selectSemester(semester.index);
+				await attendancePage.waitForLoadState();
+
+				await attendancePage.clickButtonListele();
+
+				// Wait for listing to render
+				await attendanceRecordPageHandle.waitForTimeout(2000);
+				await attendanceRecordPageHandle
+					.waitForSelector(
+						'table tr, .grid tr, .data-table tr, h1:has-text("Student Attendance Status"), h2:has-text("List of criteria")',
+						{ timeout: 10000 },
+					)
+					.catch(() => {});
+
+				// Validate attendance record list presence
+				const hasAttendanceRecord =
+					await attendancePage.isdocumentsListVisible();
+				expect(hasAttendanceRecord).toBeTruthy();
+
+				// Capture sample rows for logging
+				const attendanceRecord =
+					await attendancePage.getSampleAttendanceRecord();
+				console.log(
+					`[Batch ${batchName}] Sample attendance record (Year ${yearIndex}, ${semester.name}):`,
+					attendanceRecord,
+				);
+
+				// Capture screenshot evidence with batch, year and semester in filename
+				await attendanceRecordPageHandle.screenshot({
+					path: `test-results/screenshots/attendance-record-batch${batchName}-year${yearIndex}-${semester.name}.png`,
+					fullPage: true,
+				});
+			}
+		}
+	}
+	/*
   test('TC-020: Navigate to Courses after login and capture evidence', async ({ page }) => {
     const homePage = new HomePage(page);
     const loginPage = new LoginPage(page);
@@ -246,113 +306,137 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     // Capture screenshot evidence
     await scaPageHandle.screenshot({ path: 'test-results/screenshots/student-certificate-application.png', fullPage: true });
   });
-  
+
   // Parallel batch tests for Attendance Records
   // Split into 5 batches: each tests 5 years × 7 semesters = 35 combinations
   // All batches run in parallel for faster execution
   */
-  /**
+	/**
 
 */
 
-  async function testPaymentDetails(page,numOfEntries,batchName) {
-    const homePage = new HomePage(page);
-    const loginPage = new LoginPage(page);
-    const contractRecordPage = new ContractPage(page);
+	async function testPaymentDetails(page, numOfEntries, batchName) {
+		const homePage = new HomePage(page);
+		const loginPage = new LoginPage(page);
+		const contractRecordPage = new ContractPage(page);
 
-    // Login
-    await loginPage.goToLogin();
-    await loginPage.login(username, password);
-    await page.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    expect(await homePage.isLoggedIn()).toBeTruthy();
+		// Login
+		await loginPage.goToLogin();
+		await loginPage.login(username, password);
+		await page
+			.waitForURL(/dashboard\.aspx|\/Dashboard/i, { timeout: 20000 })
+			.catch(() => {});
+		await page.waitForTimeout(2000);
+		expect(await homePage.isLoggedIn()).toBeTruthy();
 
-    // Navigate to Contracts (capture popup if it opens like sis portal)
-    const selectors = [
-      '#ctl00_treeMenu12 > li:nth-child(12) span.file',
-      '#ctl00_treeMenu12 span.file:has-text("Contract and Payment Records")',
-      '#ctl00_treeMenu12 span.file[menuurl*="Ogr0137"]'
-    ];
-    const contractPageHandle = await clickTreeAndCapture(
-      page,
-      selectors,
-      '/Ogrenci/Ogr0137/Default.aspx?lang=en-US'
-    );
+		// Navigate to Contracts (capture popup if it opens like sis portal)
+		const selectors = [
+			"#ctl00_treeMenu12 > li:nth-child(12) span.file",
+			'#ctl00_treeMenu12 span.file:has-text("Contract and Payment Records")',
+			'#ctl00_treeMenu12 span.file[menuurl*="Ogr0137"]',
+		];
+		const contractPageHandle = await clickTreeAndCapture(
+			page,
+			selectors,
+			"/Ogrenci/Ogr0137/Default.aspx?lang=en-US",
+		);
 
+		const contractPage = new ContractPage(contractPageHandle);
 
+		// Define all semesters to test (using index-based selection)
+		const semesters = [
+			{ name: "first", index: 1 },
+			{ name: "second", index: 2 },
+			{ name: "third", index: 3 },
+			{ name: "fourth", index: 4 },
+			{ name: "fifth", index: 5 },
+			{ name: "sixth", index: 6 },
+		];
 
-    const contractPage = new ContractPage(contractPageHandle);
-    
-    // Define all semesters to test (using index-based selection)
-    const semesters = [
-      { name: 'first', index: 1 },
-      { name: 'second', index: 2 },
-      { name: 'third', index: 3 },
-      { name: 'fourth', index: 4 },
-      { name: 'fifth', index: 5 },
-      { name: 'sixth', index: 6 },
-    ];
+		// Test all combinations: years (startYear-endYear) × semesters (7)
 
-    // Test all combinations: years (startYear-endYear) × semesters (7)
-    
-      for (const semester of semesters) {
-        // Flow: Select Year -> Select Semester -> Click List
-        await contractPage.selectTableRow(semester.index);
-        await contractPage.waitForLoadState();
-        
-        await contractPage.clickButtonReport();
-        
-        // Wait for listing to render
-        await contractPageHandle.waitForTimeout(2000);
-        await contractPageHandle
-          .waitForSelector(
-            'table tr, .grid tr, .data-table tr, h1:has-text("Student Attendance Status"), h2:has-text("List of criteria")',
-            { timeout: 10000 }
-          )
-          .catch(() => {});
-        
-        // Validate attendance record list presence
-        const hasContractRecord= await contractPage.isdocumentsListVisible();
-        expect(hasContractRecord).toBeTruthy();
-        
-        // Capture screenshot evidence with batch, year and semester in filename
-        await contractPageHandle.screenshot({
-          path: `test-results/screenshots/contract-record-batch${batchName}-year${numOfEntries}-${semester.name}.png`,
-          fullPage: true,
-        });
-      }
-    
-  }
+		for (const semester of semesters) {
+			// Flow: Select Year -> Select Semester -> Click List
+			await contractPage.selectTableRow(semester.index);
+			await contractPage.waitForLoadState();
 
-  
-  test('TC-023-Batch1: Attendance Record - Years 1-5 with all semesters', async ({ page }) => {
-    test.setTimeout(300000); // 5 minutes per batch (35 combinations)
-    await testAttendanceRecordsForYearRange(page, 1, 5, '1');
-  });
+			await contractPage.clickButtonReport();
 
-  test('TC-023-Batch2: Attendance Record - Years 6-10 with all semesters', async ({ page }) => {
-    test.setTimeout(300000); 
-    await testAttendanceRecordsForYearRange(page, 6, 10, '2');
-  });
+			// Wait for listing to render
+			await contractPageHandle.waitForTimeout(2000);
+			await contractPageHandle
+				.waitForSelector(
+					'table tr, .grid tr, .data-table tr, h1:has-text("Student Attendance Status"), h2:has-text("List of criteria")',
+					{ timeout: 10000 },
+				)
+				.catch(() => {});
 
-  test('TC-023-Batch3: Attendance Record - Years 11-15 with all semesters', async ({ page }) => {
-    test.setTimeout(300000); 
-    await testAttendanceRecordsForYearRange(page, 11, 15, '3');
-  });
+			// Validate attendance record list presence
+			const hasContractRecord = await contractPage.isdocumentsListVisible();
+			expect(hasContractRecord).toBeTruthy();
 
-  test('TC-023-Batch4: Attendance Record - Years 16-20 with all semesters', async ({ page }) => {
-    test.setTimeout(300000); 
-    await testAttendanceRecordsForYearRange(page, 16, 20, '4');
-  });
+			// Capture screenshot evidence with batch, year and semester in filename
+			await contractPageHandle.screenshot({
+				path: `test-results/screenshots/contract-record-batch${batchName}-year${numOfEntries}-${semester.name}.png`,
+				fullPage: true,
+			});
+		}
+	}
 
-  test('TC-023-Batch5: Attendance Record - Years 21-25 with all semesters', async ({ page }) => {
-    test.setTimeout(300000); 
-    await testAttendanceRecordsForYearRange(page, 21, 25, '5');
-  });
-  test('TC-025: Navigate to Contract and Payment Details after login and capture evidence', async ({ page }) => {
-    await testPaymentDetails(page,5,'Main');
-  });
-/*
+	test("TC-023-Batch1: Attendance Record - Years 1-5 with all semesters", async ({
+		page,
+	}) => {
+		test.setTimeout(300000); // 5 minutes per batch (35 combinations)
+		await testAttendanceRecordsForYearRange(page, 1, 5, "1");
+	});
+
+	test("TC-023-Batch2: Attendance Record - Years 6-10 with all semesters", async ({
+		page,
+	}) => {
+		test.setTimeout(300000);
+		await testAttendanceRecordsForYearRange(page, 6, 10, "2");
+	});
+
+	test("TC-023-Batch3: Attendance Record - Years 11-15 with all semesters", async ({
+		page,
+	}) => {
+		test.setTimeout(300000);
+		await testAttendanceRecordsForYearRange(page, 11, 15, "3");
+	});
+
+	test("TC-023-Batch4: Attendance Record - Years 16-20 with all semesters", async ({
+		page,
+	}) => {
+		test.setTimeout(300000);
+		await testAttendanceRecordsForYearRange(page, 16, 20, "4");
+	});
+
+	test("TC-023-Batch5: Attendance Record - Years 21-25 with all semesters", async ({
+		page,
+	}) => {
+		test.setTimeout(300000);
+		await testAttendanceRecordsForYearRange(page, 21, 25, "5");
+	});
+	test("TC-025: Navigate to Contract and Payment Details after login and capture evidence", async ({
+		page,
+	}) => {
+		await testPaymentDetails(page, 5, "Main");
+	});
+	test("TC-026: Attendance Record Page Favourite button test", async ({
+		page,
+	}) => {
+		await testAttendanceFavouriteButton(page);
+	});
+	test("TC-027: Home Page Search Test for Negative", async ({ page }) => {
+		await testHomeMenuSearch(page, "deneme");
+	});
+	test("TC-028: Home Page Search Test for Positive (Course Schedule)", async ({
+		page,
+	}) => {
+		await testHomeMenuSearch(page, "Course Schedule");
+	});
+
+	/*
   test('TC-024: Navigate to ELS Report after login and capture evidence', async ({ page }) => {
     await performLogin(page);
 
@@ -369,7 +453,7 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     );
 
     const elsPage = new ELSPage(elsPageHandle);
-    
+
     await elsPage.clickELSActionButton();
     await elsPageHandle.waitForTimeout(2000); // Wait for report to load
 
@@ -381,5 +465,4 @@ test.describe('Post-login Navigation - IUS SIS', () => {
 
     await elsPageHandle.screenshot({ path: 'test-results/screenshots/els-report.png', fullPage: true });
   });*/
-  
 });
