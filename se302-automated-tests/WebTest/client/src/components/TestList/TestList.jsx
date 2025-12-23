@@ -1,5 +1,5 @@
+import { CheckSquare, ChevronDown, ChevronRight, FileText, Play, Square, Users } from 'lucide-react';
 import { useState } from 'react';
-import { Play, ChevronDown, ChevronRight, FileText, CheckSquare, Square, Users } from 'lucide-react';
 
 export default function TestList({ testSuites, onRunTests, isRunning }) {
   const [expandedSuites, setExpandedSuites] = useState({});
@@ -84,15 +84,7 @@ export default function TestList({ testSuites, onRunTests, isRunning }) {
             </select>
           </div>
           
-          {/* Run Button */}
-          <button
-            onClick={handleRun}
-            disabled={selectedTests.size === 0 || isRunning}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
-          >
-            <Play className="w-4 h-4" />
-            Run ({selectedTests.size})
-          </button>
+          
         </div>
       </div>
 
@@ -186,6 +178,15 @@ export default function TestList({ testSuites, onRunTests, isRunning }) {
             );
           })
         )}
+        {/* Run Button */}
+        <button
+            onClick={handleRun}
+            disabled={selectedTests.size === 0 || isRunning}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
+          >
+            <Play className="w-4 h-4" />
+            Run ({selectedTests.size})
+          </button>
       </div>
     </div>
   );
