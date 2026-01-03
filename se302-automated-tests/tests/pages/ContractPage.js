@@ -63,7 +63,15 @@ class ContractPage extends BasePage {
 
     async isdocumentsListVisible() {
         return (await this.isVisible(this.tableResults)) || (await this.isVisible(this.pageHeading));
+ 
     }
+    async isContractListVisible() {
+        return this.isContentVisible(
+            [this.tableRows],
+            [this.table],
+            [this.pageHeading]
+        );
+  }
 }
 
 module.exports = ContractPage;

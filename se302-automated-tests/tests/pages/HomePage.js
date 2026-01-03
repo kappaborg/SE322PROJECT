@@ -19,7 +19,9 @@ class HomePage extends BasePage {
     this.studentInfo = '[class*="student" i], [id*="Student"]';
     this.coursesLink = 'a:has-text("Courses"), a[href*="course"]';
     this.gradesLink = 'a:has-text("Grades"), a[href*="grade"]';
+    this.elsLink = 'a:has-text("ELS Reports"), a[href*="els"]';
     this.scheduleLink = 'a:has-text("Schedule"), a[href*="schedule"]';
+    this.contractLink = 'a:has-text("Contract and Payment Record"), a[href*="Ogr0137"]';
   }
 
   /**
@@ -29,6 +31,7 @@ class HomePage extends BasePage {
     await this.navigate('/');
     await this.waitForLoadState();
   }
+  
 
   /**
    * Navigate to login page
@@ -111,6 +114,22 @@ class HomePage extends BasePage {
       await this.waitForLoadState();
     }
   }
+  /**
+   * Navigate to ELS Reports
+   */
+  async goToEls() {
+    if (await this.isVisible(this.elsLink)) {
+      await this.click(this.elsLink);
+      await this.waitForLoadState();
+    }
+  }
+  async goToContract() {
+    if (await this.isVisible(this.contractLink)) {
+      await this.click(this.contractLink);
+      await this.waitForLoadState();
+    }
+  }
+  
 }
 
 module.exports = HomePage;
