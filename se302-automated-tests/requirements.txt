@@ -1,10 +1,7 @@
-# Python requirements (optional; the project is Node.js-based)
-# Use this if you prefer to install Playwright via pip to fetch browsers:
 playwright==1.40.0
 
 # Note:
 # - Core automation is in Node.js; install via:
 #     npm install
 #     npx playwright install
-# - No additional Python dependencies are required beyond playwright.
 

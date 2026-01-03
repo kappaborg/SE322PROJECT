@@ -40,6 +40,10 @@ class LoginPage extends BasePage {
     this.errorMessage = '.error, .alert-danger, .validation-summary-errors, span[id*="Error"]';
     this.successMessage = '.success, .alert-success';
     this.pageTitle = 'Log In';
+    
+    // reCAPTCHA
+    this.captchaCheckbox = '#recaptcha-anchor > div.recaptcha-checkbox-border';
+    this.captchaFrame = 'iframe[title*="reCAPTCHA"]';
   }
 
   /**
@@ -116,12 +120,36 @@ class LoginPage extends BasePage {
   }
 
   /**
+   * Handle reCAPTCHA if it appears (sometimes it shows, sometimes it doesn't)
+   */
+  async handleCaptchaIfPresent() {
+    try {
+      // Check if captcha iframe exists
+      const captchaFrame = this.page.frameLocator(this.captchaFrame);
+      const checkbox = captchaFrame.locator(this.captchaCheckbox);
+      
+      // Wait a short time to see if captcha appears
+      await checkbox.waitFor({ state: 'visible', timeout: 3000 });
+      
+      // Click the checkbox
+      await checkbox.click();
+      
+      // Wait a bit for captcha to be verified
+      await this.page.waitForTimeout(2000);
+    } catch (error) {
+      // Captcha not present or already solved, continue
+      console.log('Captcha not present or already handled');
+    }
+  }
+
+  /**
    * Complete login process
    * @param {string} username - Username
    * @param {string} password - Password
    */
   async login(username, password) {
     await this.fillCredentials(username, password);
+    await this.handleCaptchaIfPresent();
     await this.clickLoginButton();
   }
 

@@ -1,10 +1,10 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-console.log('🚀 Starting WebTest Dashboard...\n');
+console.log('Starting WebTest Dashboard...\n');
 
 // Start server
-console.log('📡 Starting backend server...');
+console.log('Starting backend server...');
 const server = spawn('npm', ['start'], {
   cwd: path.join(__dirname, 'server'),
   shell: true,
