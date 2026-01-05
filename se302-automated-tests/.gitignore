@@ -7,10 +7,13 @@ yarn.lock
 test-results/
 playwright-report/
 reports/
-*.png
 *.jpg
 *.mp4
 *.webm
+
+# Ignore PNG files in test directories, but allow in main screenshots/
+*.png
+!../../screenshots/*.png
 
 # Playwright
 .playwright/

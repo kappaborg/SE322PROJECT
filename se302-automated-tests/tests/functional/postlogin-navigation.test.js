@@ -91,14 +91,18 @@ test.describe('Post-login Navigation - IUS SIS', () => {
         const attendanceRecord = await attendancePageInstance.getSampleAttendanceRecord();
         console.log(`[Batch ${batchName}] Sample attendance record (Year ${yearIndex}, ${semester.name}):`, attendanceRecord);
         
+        // Save first attendance record with documentation name, others with detailed names
+        const screenshotName = (batchName === '1' && yearIndex === 1 && semester.name === 'Fall') 
+          ? 'test-results/screenshots/07-tc011-attendance-record.png'
+          : `test-results/screenshots/attendance-record-batch${batchName}-year${yearIndex}-${semester.name}.png`;
         await attendanceRecordPageHandle.screenshot({
-          path: `test-results/screenshots/attendance-record-batch${batchName}-year${yearIndex}-${semester.name}.png`,
+          path: screenshotName,
           fullPage: true,
         });
       }
     }
   }
-  test('TC-002: Navigate to Courses after login and capture evidence', async ({ page }) => {
+  test('TC-008: Navigate to Courses after login and capture evidence', async ({ page }) => {
     await performLogin(page);
 
     const coursesPage = new CoursesPage(page);
@@ -119,10 +123,10 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     const courses = await coursePage.getSampleCourses();
     console.log('Sample courses:', courses);
 
-    await coursePageHandle.screenshot({ path: 'test-results/screenshots/courses.png', fullPage: true });
+    await coursePageHandle.screenshot({ path: 'test-results/screenshots/04-tc008-courses-page.png', fullPage: true });
   });
 
-  test('TC-003: Navigate to Grades after login and capture evidence', async ({ page }) => {
+  test('TC-009: Navigate to Grades after login and capture evidence', async ({ page }) => {
     await performLogin(page);
 
     const gradesPage = new GradesPage(page);
@@ -145,10 +149,10 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     const grades = await gradePage.getSampleGrades();
     console.log('Sample grades:', grades);
 
-    await gradesPageHandle.screenshot({ path: 'test-results/screenshots/grades.png', fullPage: true });
+    await gradesPageHandle.screenshot({ path: 'test-results/screenshots/05-tc009-grades-page.png', fullPage: true });
   });
 
-  test('TC-014: Navigate to Student Certificate Application after login and capture evidence', async ({ page }) => {
+  test('TC-010: Navigate to Student Certificate Application after login and capture evidence', async ({ page }) => {
     await performLogin(page);
 
     const studentCertificateApplicationPage = new StudentSertificateApplicationPage(page);
@@ -169,7 +173,7 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     const studentCertificateApplication = await scaPage.getSampledocuments();
     console.log('Sample student certificate application:', studentCertificateApplication);
 
-    await scaPageHandle.screenshot({ path: 'test-results/screenshots/student-certificate-application.png', fullPage: true });
+    await scaPageHandle.screenshot({ path: 'test-results/screenshots/06-tc010-student-certificate.png', fullPage: true });
   });
 
   async function testPaymentDetails(page, batchName) {
@@ -228,8 +232,12 @@ test.describe('Post-login Navigation - IUS SIS', () => {
         
         console.log(`[Batch ${batchName}] Row ${rowIndex}/${totalRows} tested successfully`);
         
+        // Save first contract with documentation name, others with detailed names
+        const contractScreenshotName = (batchName === '1' && rowIndex === 1)
+          ? 'test-results/screenshots/09-tc017-contract-payment.png'
+          : `test-results/screenshots/contract-record-batch${batchName}-row${rowIndex}.png`;
         await contractPageHandle.screenshot({
-          path: `test-results/screenshots/contract-record-batch${batchName}-row${rowIndex}.png`,
+          path: contractScreenshotName,
           fullPage: true,
         });
     }
@@ -237,31 +245,31 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     console.log(`[Batch ${batchName}] All ${totalRows} rows tested successfully`);
   }
 
-  test('TC-015: Attendance Record - Years 1-5 with all semesters', async ({ page }) => {
+  test('TC-011: Attendance Record - Years 1-5 with all semesters', async ({ page }) => {
     test.setTimeout(300000);
     await testAttendanceRecordsForYearRange(page, 1, 5, '1');
   });
 
-  test('TC-016: Attendance Record - Years 6-10 with all semesters', async ({ page }) => {
+  test('TC-012: Attendance Record - Years 6-10 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 6, 10, '2');
   });
 
-  test('TC-017: Attendance Record - Years 11-15 with all semesters', async ({ page }) => {
+  test('TC-013: Attendance Record - Years 11-15 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 11, 15, '3');
   });
 
-  test('TC-018: Attendance Record - Years 16-20 with all semesters', async ({ page }) => {
+  test('TC-014: Attendance Record - Years 16-20 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 16, 20, '4');
   });
 
-  test('TC-019: Attendance Record - Years 21-25 with all semesters', async ({ page }) => {
+  test('TC-015: Attendance Record - Years 21-25 with all semesters', async ({ page }) => {
     test.setTimeout(300000); 
     await testAttendanceRecordsForYearRange(page, 21, 25, '5');
   });
-  test('TC-020: Navigate to ELS Report after login and capture evidence', async ({ page }) => {
+  test('TC-016: Navigate to ELS Report after login and capture evidence', async ({ page }) => {
     await performLogin(page);
 
     const elsPage = new ELSPage(page);
@@ -287,10 +295,10 @@ test.describe('Post-login Navigation - IUS SIS', () => {
     const elsData = await elsPageInstance.getSampleELS();
     console.log('Sample ELS report:', elsData);
 
-    await elsPageHandle.screenshot({ path: 'test-results/screenshots/els-report.png', fullPage: true });
+    await elsPageHandle.screenshot({ path: 'test-results/screenshots/08-tc016-els-report.png', fullPage: true });
   });
 
-  test('TC-021: Navigate to Contract and Payment Details after login and capture evidence', async ({ page }) => {
+  test('TC-017: Navigate to Contract and Payment Details after login and capture evidence', async ({ page }) => {
     await testPaymentDetails(page, '1');
   });
   

@@ -8,10 +8,13 @@ const { invalidTestData } = require('../../utils/testData');
 /**
  * Functional Test Cases for Login Functionality - IUS SIS
  * 
- * Test Case 1: Valid Login (Positive) - uses env credentials if provided
- * Test Case 4: Invalid Username or Password on Login (Negative)
- * Test Case 5: Empty Username Input Field (Negative)
- * Test Case 6: Empty Password Input Field (Negative)
+ * TC-001: Valid Login (Positive)
+ * TC-002: Invalid Username or Password on Login (Negative)
+ * TC-003: Empty Username Input Field (Negative)
+ * TC-004: Empty Password Input Field (Negative)
+ * TC-005: Lost Password Link (Positive)
+ * TC-006: Generate First Time Password Link (Positive)
+ * TC-007: Logout after Login (Positive)
  */
 
 test.describe('Login Functional Tests - IUS SIS', () => {
@@ -39,9 +42,12 @@ test.describe('Login Functional Tests - IUS SIS', () => {
     // Expect to leave login page
     await page.waitForTimeout(2000);
     expect(await homePage.isLoggedIn()).toBeTruthy();
+    
+    // Capture screenshot after successful login
+    await page.screenshot({ path: 'test-results/screenshots/tc001-login-success.png', fullPage: true });
   });
 
-  test('TC-004: Invalid Username or Password on Login (Negative)', async ({ page }) => {
+  test('TC-002: Invalid Username or Password on Login (Negative)', async ({ page }) => {
     test.setTimeout(5000);
     
     await loginPage.fillCredentials('invalid_username', 'wrongpassword');
@@ -56,7 +62,7 @@ test.describe('Login Functional Tests - IUS SIS', () => {
     expect(isStillOnLogin).toBeTruthy();
   });
 
-  test('TC-005: Empty Username Input Field (Negative)', async ({ page }) => {
+  test('TC-003: Empty Username Input Field (Negative)', async ({ page }) => {
     test.setTimeout(5000);
     
     await loginPage.fillPassword('somepassword');
@@ -71,7 +77,7 @@ test.describe('Login Functional Tests - IUS SIS', () => {
     expect(isUsernameEmpty || isStillOnLogin).toBeTruthy();
   });
 
-  test('TC-006: Empty Password Input Field (Negative)', async ({ page }) => {
+  test('TC-004: Empty Password Input Field (Negative)', async ({ page }) => {
     test.setTimeout(5000);
     
     await loginPage.fillUsername('testuser');
@@ -86,7 +92,7 @@ test.describe('Login Functional Tests - IUS SIS', () => {
     expect(isPasswordEmpty || isStillOnLogin).toBeTruthy();
   });
 
-  test('TC-012: Lost Password Link (Positive)', async ({ page }) => {
+  test('TC-005: Lost Password Link (Positive)', async ({ page }) => {
     // Preconditions: User is on login page
     // Steps to reproduce:
     // 1. Navigate to login page
@@ -100,7 +106,7 @@ test.describe('Login Functional Tests - IUS SIS', () => {
     expect(currentUrl).toContain('lostpassword');
   });
 
-  test('TC-013: Generate First Time Password Link (Positive)', async ({ page }) => {
+  test('TC-006: Generate First Time Password Link (Positive)', async ({ page }) => {
     await loginPage.clickGeneratePasswordLink();
     
     await Promise.race([
